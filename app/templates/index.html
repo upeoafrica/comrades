@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COMRADE POWER</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+    .active-tab {
+      color: #4F46E5;
+    }
+    .active-tab i {
+      color: #4F46E5;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-2">
+      <h1 class="text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r to-cyan-600 from-green-400">Comrades</h1>
+     <button id="upload-event-btn" class="bg-gradient-to-r to-indigo-600 from-green-400 text-white px-3 py-1 pb-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+      + Post Event
+    </button>
+    </div>
+  </header>
+
+  <!-- Lifestyle Feed Container -->
+  <section class="max-w-7xl mx-auto p-3 w-full">
+    <!-- Search Bar -->
+    <div class="relative mb-4">
+      <input
+        id="search-events"
+        type="text"
+        placeholder="Search events by title, description, location..."
+        class="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition"
+      />
+      <i class="ri-search-line absolute left-3 top-1.5 text-gray-400 text-lg"></i>
+    </div>
+
+     <!-- Feed message -->
+      <div id="feed-message" class="mb-1 text-center text-xs text-cyan-400"></div>
+<!-- Lifestyle Feed -->
+ <main id="lifestyle-feed" class="flex-1 max-w-7xl mx-auto p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start overflow-y-auto">
+    <!-- Event cards injected dynamically -->
+  </main>
+
+
+    
+  </section>
+
+
+   <!-- Template for Event Card -->
+  <template id="event-card-template">
+  <div class="bg-white rounded-xl shadow hover:shadow-md transition overflow-hidden border border-gray-100 h-auto">
+    <!-- Event image -->
+    <img class="w-full h-28 object-cover" src="" alt="Event image" />
+    
+    <!-- Event details -->
+    <div class="p-2 space-y-1">
+      <!-- Title + Date Label -->
+      <div class="flex justify-between items-center">
+        <h2 class="font-semibold text-[13px] leading-snug line-clamp-2 text-transparent bg-clip-text bg-gradient-to-r to-green-400 from-indigo-600"></h2>
+        <span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap"></span>
+      </div>
+
+      <!-- Description -->
+      <p class="text-gray-500 text-[11px] line-clamp-2"></p>
+
+      <!-- Location + Button -->
+      <div class="flex justify-between items-center mt-1">
+        <span class="text-[11px] font-medium text-green-400 truncate max-w-[60%]"></span>
+        <button class="bg-gradient-to-r to-green-400 from-indigo-600 text-white px-2 py-1 rounded-lg text-[11px] font-medium hover:bg-indigo-700 transition">
+          Details & Ticket
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Event Details Modal -->
+<div id="event-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-xl shadow-lg w-96 p-4">
+    <h2 id="modal-title" class="text-lg font-bold text-indigo-700"></h2>
+    <img id="modal-image" src="" alt="Event image" class="w-full h-40 object-cover rounded-lg mt-2">
+    <p id="modal-description" class="text-gray-600 text-sm mt-2"></p>
+    <hr class="mt-2">
+    <!-- Campus left, date + price right -->
+    <div class="flex justify-between items-start mt-2">
+      <p id="modal-campus" class="text-green-600 text-xs font-medium"></p>
+      <div class="text-right">
+        <p id="modal-date" class="text-green-600 text-xs"></p>
+        <p id="modal-price" class="text-green-600 text-xs"></p>
+      </div>
+    </div>
+    
+    <!-- Buttons -->
+    <div class="flex flex-col space-y-2 mt-4">
+      <div class="flex justify-end space-x-2">
+        <button id="modal-cancel" class="px-3 py-1 rounded-lg border text-gray-600 hover:bg-gray-100">Cancel</button>
+        <button id="modal-pay" class="px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">I’m in</button>
+      </div>
+      <p class="text-xs text-gray-500 text-center">
+        Clicking “I’m in” will submit your email to the event owner.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+<!-- Create Event Link-Up Modal -->
+<div id="upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <!-- Add max-h and overflow-y to make it scrollable -->
+  <div class="bg-white rounded-xl shadow-lg w-96 max-h-[80vh] overflow-y-auto p-4">
+    <h2 class="text-lg font-bold text-indigo-600">Create a Link-Up</h2>
+    <form id="upload-form" class="space-y-3 mt-3">
+      <input type="text" name="title" placeholder="Event Title" class="w-full border rounded p-2 text-sm" required>
+      <textarea name="description" placeholder="Description" class="w-full border rounded p-2 text-sm" required></textarea>
+      
+      <label class="block text-sm font-medium text-indigo-400">Location</label>
+
+      <!-- Campus (autocomplete) -->
+      <div class="relative">
+        <input 
+          type="text" 
+          id="campus-search" 
+          placeholder="Search University or Custom..." 
+          class="w-full border rounded p-2 text-sm"
+          autocomplete="off"
+        >
+        <ul id="campus-results" class="absolute z-10 bg-white border rounded w-full mt-1 max-h-40 overflow-y-auto hidden"></ul>
+      </div>
+      <input type="hidden" name="campus" id="campus-hidden">
+      <input type="hidden" name="is_custom_location" id="campus-custom" value="false">
+
+      <!-- Open To -->
+      <label class="block text-sm font-medium text-indigo-400">Open To</label>
+      <select name="open_to" class="w-full border rounded p-2 text-sm" required>
+        <option value="everyone">Everyone</option>
+        <option value="students">Our Students Only</option>
+        <option value="alumni">Our Alumni Only</option>
+        <option value="alumni+students">Our (Alumni + Students)</option>
+      </select>
+
+      <label class="block text-sm font-medium text-indigo-400">Link-up Date</label>
+      <input type="datetime-local" name="start_time" class="w-full border rounded p-2 text-sm">
+      
+      <label class="block text-sm font-medium text-indigo-400">End Date</label>
+      <input type="datetime-local" name="end_time" class="w-full border rounded p-2 text-sm">
+
+      <!-- Ticket Price -->
+      <div class="flex items-center space-x-2">
+        <input type="number" name="ticket_price" id="ticket-price" placeholder="Ticket Price" class="flex-1 border rounded p-2 text-sm">
+        <label class="flex items-center space-x-1 text-sm">
+          <input type="checkbox" name="is_free" id="is-free" class="rounded">
+          <span>Free Event</span>
+        </label>
+      </div>
+
+      <input type="url" name="image_url" placeholder="Image URL" class="w-full border rounded p-2 text-sm">
+
+      <!-- Sticky action buttons -->
+      <!-- <div class="flex justify-end space-x-2 sticky bottom-0 bg-white pt-2 pb-1"> -->
+        <button type="button" id="upload-cancel" class="px-3 py-1 rounded-lg border text-gray-600 hover:bg-gray-100">Cancel</button>
+        <button type="submit" class="px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Save</button>
+      <!-- </div> -->
+    </form>
+  </div>
+</div>
+
+
+
+
+  <!-- Sticky Bottom Navigation -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white border-t shadow z-50">
+    <div class="flex justify-around py-1">
+      <!-- Lifestyle (Active) -->
+      <button class="flex flex-col items-center active-tab">
+        <i class="ri-ticket-line text-xl"></i>
+        <span class="text-[10px] font-medium mt-0.5">LifeStyle</span>
+      </button>
+      <!-- Soko -->
+      <button class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
+        <i class="ri-store-2-line text-xl"></i>
+        <span class="text-[10px] font-medium mt-0.5">Soko</span>
+      </button>
+      <!-- Mtaani -->
+      <button class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
+        <i class="ri-community-line text-xl"></i>
+        <span class="text-[10px] font-medium mt-0.5">Mtaani</span>
+      </button>
+      <!-- Profile -->
+      <button class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
+        <i class="ri-user-3-line text-xl"></i>
+        <span class="text-[10px] font-medium mt-0.5">Profile</span>
+      </button>
+    </div>
+  </nav>
+
+ </template>
+
+  <script src="{{ url_for('static', filename='js/lifestyle.js') }}"></script>
+</body>
+</html>
