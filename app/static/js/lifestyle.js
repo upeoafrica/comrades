@@ -205,25 +205,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Global fetch wrapper with rate-limit + error handling
     async function apiFetch(url, options = {}) {
         try {
-        const res = await fetch(url, options);
-
-        if (res.status === 429) {
-            const err = await res.json();
-            showToast(err.message || "Too many requests. Please slow down.", "error");
-            throw new Error("Rate limited");
-        }
-
-        if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-        }
-
-        return await res.json();
+            const res = await fetch(url, options);
+    
+            // Handle rate limiting
+            if (res.status === 429) {
+                const err = await res.json();
+                showToast(err.message || "Too many requests. Please slow down.", "error");
+                throw new Error("Rate limited");
+            }
+    
+            // Handle unauthorized → redirect to login
+            if (res.status === 401) {
+                showToast("Session expired. Please log in again.", "warning");
+                window.location.href = "/auth/login";
+                throw new Error("Unauthorized");
+            }
+    
+            // If server sends error JSON, show it
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const message = err.message || `Request failed (${res.status})`;
+                showToast(message, "error");
+                throw new Error(message);
+            }
+    
+            // Success → return JSON
+            return await res.json();
         } catch (err) {
-        console.error("API fetch failed:", err);
-        if (err.message !== "Rate limited") {
-            showToast("Something went wrong. Please try again.", "error");
-        }
-        throw err; // rethrow so caller can handle
+            console.error("API fetch failed:", err);
+            if (err.message !== "Rate limited" && err.message !== "Unauthorized") {
+                showToast("Something went wrong. Please try again.", "error");
+            }
+            throw err;
         }
     }
 
@@ -642,3 +655,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
