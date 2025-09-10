@@ -235,3 +235,16 @@ def get_events():
 
     events = [serialize_event(e, user_email) for e in events_cursor]
     return jsonify(events)
+
+
+@api_bp.route("/user/optins", methods=["GET"])
+def get_user_optins():
+    email = session["user"]["email"]
+    if not email:
+        return jsonify({"error": "Missing email"}), 400
+
+    user = db.user_optins.find_one({"email": email})
+    if not user:
+        return jsonify({"events": []})
+
+    return jsonify({"events": [str(eid) for eid in user.get("events", [])]})

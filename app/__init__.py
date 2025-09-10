@@ -19,7 +19,7 @@ oauth = OAuth()
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = os.getenv("APP_SECRET_KEY") or "dev-secret"
+    app.secret_key = os.getenv("APP_SECRET_KEY")
 
     # --- Auth0 Setup ---
     oauth.init_app(app)
