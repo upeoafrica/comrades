@@ -12,8 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // showToast("Please log in to continue", "error");
         window.location.href = "/auth/login";
     }
-
-    
+    // Fetch user session details   
 
     async function fetchUserSession() {
         try {
@@ -35,6 +34,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             CURRENT_USER_EMAIL = null;
         }
     }
+
+    const profileBtn = document.getElementById("profile-btn");
+    const profilePopup = document.getElementById("profile-popup");
+
+    if (profileBtn) {
+        profileBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        profilePopup.classList.toggle("hidden");
+        });
+    }
+
+    // Close popup when clicking outside
+    document.addEventListener("click", (e) => {
+        if (!profilePopup.contains(e.target) && e.target !== profileBtn) {
+        profilePopup.classList.add("hidden");
+        }
+    });
 
 
     let userOptIns = [];
