@@ -102,15 +102,8 @@ def callback():
 @auth_bp.route("/logout")
 def logout():
     session.clear()
-    auth0_domain = os.getenv("AUTH0_DOMAIN") or ""
-    auth0_client_id = os.getenv("AUTH0_CLIENT_ID") or ""
-
-    return redirect(
-        f"https://{auth0_domain}/v2/logout?"
-        + urlencode({
-            "returnTo": os.getenv("AUTH0_LOGOUT_URL", url_for("views.home", _external=True)),
-            "client_id": auth0_client_id
-        }, quote_via=quote_plus)
-    )
-
-
+    params = {
+        "returnTo": url_for("views.home", _external=True),
+        "client_id": os.getenv("AUTH0_CLIENT_ID")
+    }
+    return redirect(f"https://{os.getenv('AUTH0_DOMAIN')}/v2/logout?" + urlencode(params))
