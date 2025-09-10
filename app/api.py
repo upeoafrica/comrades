@@ -236,6 +236,104 @@ def get_events():
     events = [serialize_event(e, user_email) for e in events_cursor]
     return jsonify(events)
 
+@api_bp.route("/events/<event_id>/reserve", methods=["POST"])
+def reserve_seat(event_id):
+    try:
+        data = request.json or {}
+        email = data.get("email")
+        if not email:
+            return jsonify({"error": "Email required"}), 400
+
+        event = db.events.find_one({"_id": ObjectId(event_id)})
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
+
+        # Check if user already opted in
+        user = db.user_optins.find_one({"email": email})
+        if user and ObjectId(event_id) in user.get("events", []):
+            return jsonify({"message": "Already reserved this event."}), 200
+
+        # Add to user_optins (create if not exists)
+        db.user_optins.update_one(
+            {"email": email},
+            {"$addToSet": {"events": ObjectId(event_id)}},
+            upsert=True
+        )
+
+        # Increment tickets_sold only once
+        db.events.update_one(
+            {"_id": ObjectId(event_id)},
+            {"$inc": {"tickets_sold": 1}}
+        )
+
+        return jsonify({"message": "Reservation successful!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------- server: create event --------------
+@api_bp.route("/events/create", methods=["POST"])
+def create_event():
+    try:
+        data = request.json or {}
+
+        # Extract fields
+        title = (data.get("title") or "").strip()
+        description = (data.get("description") or "").strip()
+        campus = data.get("campus")
+        location = data.get("location")
+        image_url = data.get("image_url")
+        open_to = (data.get("open_to") or "everyone").lower()
+        start_time = parse_datetime(data.get("start_time"))
+        end_time = parse_datetime(data.get("end_time"))
+        is_free_raw = data.get("is_free")
+        is_free = str(is_free_raw).lower() in ["true", "1", "yes", "on"]
+
+        # Normalize ticket price
+        if is_free:
+            ticket_price = 0.0
+        else:
+            try:
+                ticket_price = float(data.get("ticket_price", 0) or 0)
+            except (TypeError, ValueError):
+                ticket_price = 0.0
+
+        # Parse custom flag (expected true/"true"/"1" etc. from front-end)
+        is_custom = str(data.get("is_custom_location", False)).lower() in ["true", "1", "yes", "on"]
+
+        # Service fee logic (for custom locations) — adjust percentages/min as you like
+        SERVICE_FEE_PERCENT = 0.10
+        MIN_SERVICE_FEE = 50.0
+        service_fee = 0.0
+        if is_custom:
+            service_fee = max(MIN_SERVICE_FEE, round(ticket_price * SERVICE_FEE_PERCENT, 2))
+
+        event = {
+            "title": title,
+            "description": description,
+            "image_url": image_url,
+            "location": (location if location else campus),
+            "open_to": open_to,
+            "start_time": start_time,
+            "end_time": end_time,
+            "ticket_price": ticket_price,
+            "is_free": is_free,
+            "tickets_sold": 0,
+            "is_custom_location": is_custom,
+            "service_fee": service_fee,
+            "created_at": datetime.datetime.utcnow(),
+            "created_by": "roy.murwa@strathmore.edu",  # placeholder
+        }
+
+        result = db.events.insert_one(event)
+        event["_id"] = str(result.inserted_id)
+        return jsonify({"message": "Event created successfully", "event": serialize_event(event)}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 
 @api_bp.route("/user/optins", methods=["GET"])
 def get_user_optins():
