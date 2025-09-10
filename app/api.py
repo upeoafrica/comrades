@@ -70,6 +70,38 @@ def serialize_event(event, user_email=None):
    }
 
 
+@api_bp.route("/universities/validate-domain", methods=["GET"])
+def validate_university_domain():
+    try:
+        domain = request.args.get("domain", "").lower().strip()
+
+        if not domain:
+            return jsonify({
+                "allowed": False,
+                "message": "Missing email domain."
+            }), 400
+
+        # ✅ Check if domain exists in MongoDB
+        university = db.universities.find_one({"domain": domain})
+
+        if not university:
+            return jsonify({
+                "allowed": False,
+                "message": "This email domain is not linked to any recognized university."
+            }), 200
+
+        # ✅ Domain is valid
+        return jsonify({
+            "allowed": True,
+            "university": university["name"]
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "allowed": False,
+            "message": f"Error checking domain: {str(e)}"
+        }), 500
+
 
 # -----------------------------
 # Nearest Universities

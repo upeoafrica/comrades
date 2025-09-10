@@ -28,8 +28,8 @@ def get_session():
     return jsonify({
         "email": email,
         "name": user.get("name"),
-        "latitude": float(user.get("latitude")),
-        "longitude": float(user.get("longitude")),
+        "latitude": float(latitude),
+        "longitude": float(longitude),
         "university": university
     }), 200
 
