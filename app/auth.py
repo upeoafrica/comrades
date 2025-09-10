@@ -9,26 +9,24 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/session")
 def get_session():
-    if "user" not in session:
-        return jsonify({"user": None}), 200
-
     user = session["user"]
     email = user["email"]
     domain = email.split("@")[-1].lower()
+    picture = session["user"]["picture"]
 
     # Fetch user's university based on domain
-    university = None
+    university = session["user"]["university"]
     if domain:
         uni_doc = db.universities.find_one({"domain": domain}, {"name": 1})
-        print(domain, unidoc)
-        if uni_doc:
-            university = uni_doc["name"]
+        print(domain, uni_doc)
+        if uni_doc:            
             latitude = uni_doc["latitude"]
             longitude = uni_doc["longitude"]
 
     return jsonify({
         "email": email,
         "name": user.get("name"),
+        "picture": picture,
         "latitude": float(latitude),
         "longitude": float(longitude),
         "university": university
@@ -83,7 +81,7 @@ def callback():
                 "name": user_info.get("name", ""),
                 "university_id": str(university["_id"]),
                 "university_name": university["name"],
-                "created_at": datetime.datetime.utcnow()
+                "created_at": datetime.datetime.now(datetime.timezone.utc)
             })
         except Exception as e:
             return jsonify({"error": f"User creation failed: {str(e)}"}), 500
@@ -93,6 +91,7 @@ def callback():
         "email": email,
         "name": user_info.get("name", ""),
         "university": university["name"],
+        "picture": user_info.get("picture")
     }
 
     return redirect(url_for("views.home"))
@@ -107,5 +106,4 @@ def logout():
         "returnTo": url_for("views.home", _external=True),
         "client_id": os.getenv("AUTH0_CLIENT_ID")
     }
-
     return redirect(f"https://{os.getenv('AUTH0_DOMAIN')}/v2/logout?" + urlencode(params))
