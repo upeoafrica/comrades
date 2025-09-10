@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (err) {
             console.error("API fetch failed:", err);
             if (err.message !== "Rate limited" && err.message !== "Unauthorized") {
-                showToast("Something went wrong. Please try again.", "error");
+                showToast(err.message, "error");
             }
             throw err;
         }
@@ -655,4 +655,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
 
