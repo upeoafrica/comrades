@@ -1,59 +1,46 @@
-from flask import Flask
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from dotenv import load_dotenv
-from urllib.parse import quote_plus
 import os
-
-from flask import jsonify
+from flask import Flask, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_limiter.errors import RateLimitExceeded
+from authlib.integrations.flask_client import OAuth
+from urllib.parse import quote_plus
+from dotenv import load_dotenv
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 load_dotenv()
 
+# --- Rate Limiter ---
+limiter = Limiter(key_func=get_remote_address, default_limits=["1000 per day", "200 per hour"])
 
-    # Load env vars
-mongo_user = os.getenv("MONGO_USER")
-mongo_password = os.getenv("MONGO_PASSWORD")
-mongo_cluster = os.getenv("MONGO_CLUSTER")
-mongo_db = os.getenv("MONGO_DB")
-
-    # Validate password
-if not mongo_password:
-    raise ValueError("MONGO_PASSWORD is missing in your .env file!")
-
-    # Encode special chars in password
-mongo_password_encoded = quote_plus(mongo_password)
-
-    # Build full URI
-mongo_uri = (
-    f"mongodb+srv://{mongo_user}:{mongo_password_encoded}@{mongo_cluster}/{mongo_db}"
-    "?retryWrites=true&w=majority&appName=SomoCluster"
-)
-
-# Global DB client
-global client, db
-client = MongoClient(mongo_uri, server_api=ServerApi("1"))
-db = client.get_database(mongo_db)
+# --- Global OAuth instance ---
+oauth = OAuth()
 
 def create_app():
     app = Flask(__name__)
+    app.secret_key = os.getenv("APP_SECRET_KEY") or "dev-secret"
 
-    # Load env vars
+    # --- Auth0 Setup ---
+    oauth.init_app(app)
+    oauth.register(
+        "auth0",
+        client_id=os.getenv("AUTH0_CLIENT_ID"),
+        client_secret=os.getenv("AUTH0_CLIENT_SECRET"),
+        client_kwargs={"scope": "openid profile email"},
+        server_metadata_url=f'https://{os.getenv("AUTH0_DOMAIN")}/.well-known/openid-configuration'
+    )
+
+    # --- MongoDB Setup ---
     mongo_user = os.getenv("MONGO_USER")
     mongo_password = os.getenv("MONGO_PASSWORD")
     mongo_cluster = os.getenv("MONGO_CLUSTER")
     mongo_db = os.getenv("MONGO_DB")
 
-    # Validate password
     if not mongo_password:
-        raise ValueError("MONGO_PASSWORD is missing in your .env file!")
+        raise ValueError("MONGO_PASSWORD is missing in .env")
 
-    # Encode special chars in password
     mongo_password_encoded = quote_plus(mongo_password)
-
-    # Build full URI
     mongo_uri = (
         f"mongodb+srv://{mongo_user}:{mongo_password_encoded}@{mongo_cluster}/{mongo_db}"
         "?retryWrites=true&w=majority&appName=SomoCluster"
@@ -63,27 +50,20 @@ def create_app():
     client = MongoClient(mongo_uri, server_api=ServerApi("1"))
     db = client.get_database(mongo_db)
 
-    # --- Flask-Limiter setup ✅
-    limiter = Limiter(
-        key_func=get_remote_address,
-        default_limits=["1000 per day", "200 per hour"]  # global defaults
-    )
+    # --- Rate Limiter ---
     limiter.init_app(app)
 
-    # --- Custom error handler for rate limits
     @app.errorhandler(RateLimitExceeded)
     def handle_rate_limit(e):
-        return jsonify({
-            "error": "Too many requests",
-            "message": "Bro, you’re making too many requests. Please wait a moment.",
-            "status": 429
-        }), 429
+        return jsonify({"error": "Too many requests"}), 429
 
-    # Import blueprints AFTER db is ready ✅
+    # --- Blueprints ---
     from app.views import views_bp
     from app.api import api_bp
+    from app.auth import auth_bp
+
     app.register_blueprint(views_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
-    
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     return app

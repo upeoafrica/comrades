@@ -1,5 +1,42 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const CURRENT_USER_EMAIL = "roy.murwa@strathmore.edu";  // placeholder
+document.addEventListener("DOMContentLoaded", async () => {
+
+    let CURRENT_USER_EMAIL = null;
+    let CURRENT_USER_UNIVERSITY = null;
+    let CURRENT_USER_NAME = null;
+    let DEFAULT_UNI_LAT = null;
+    let DEFAULT_UNI_LNG = null;
+
+    await fetchUserSession();
+
+    if (!CURRENT_USER_EMAIL) {
+        // showToast("Please log in to continue", "error");
+        window.location.href = "/auth/login";
+    }
+
+    
+
+    async function fetchUserSession() {
+        try {
+            const res = await fetch("/auth/session");
+            const data = await res.json();
+            if (data && data.email) {
+                CURRENT_USER_EMAIL = data.email;
+                CURRENT_USER_UNIVERSITY = data.university;
+                CURRENT_USER_NAME = data.name;
+                DEFAULT_UNI_LAT = data.latitude;
+                DEFAULT_UNI_LNG = data.longitude;
+                // console.log("[lifestyle] Logged in as:", CURRENT_USER_EMAIL);
+            } else {
+                // console.warn("[lifestyle] No active session. Redirecting to login...");
+                CURRENT_USER_EMAIL = null;
+            }
+        } catch (err) {
+            console.error("[lifestyle] Failed to fetch session:", err);
+            CURRENT_USER_EMAIL = null;
+        }
+    }
+
+
     let userOptIns = [];
     let customEvents = [];      // holds custom events shown in the custom section
     const CUSTOM_SURCHARGE_PERCENT = 0.10; // 10%
@@ -205,9 +242,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
         (position) => {
-            const { latitude, longitude, accuracy } = position.coords;
-            console.log(`User location: ${latitude}, ${longitude}, accuracy: ${accuracy}m`);
+            let { latitude, longitude, accuracy } = position.coords;
             // console.log(`User location: ${latitude}, ${longitude}, accuracy: ${accuracy}m`);
+            // console.log(`User location: ${latitude}, ${longitude}, accuracy: ${accuracy}m`);
+
+            // If accuracy too poor (>1000m), fallback to session university
+            if (accuracy > 1000) {
+                // console.warn("[lifestyle] GPS accuracy too low. Using session university.");
+                // return CURRENT_USER_UNIVERSITY;
+                latitude = DEFAULT_UNI_LAT;
+                longitude = DEFAULT_UNI_LNG;
+            }
 
             // Fetch user opt-ins once
             apiFetch(`/api/user/optins?email=${encodeURIComponent(CURRENT_USER_EMAIL)}`)
@@ -221,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiFetch(`/api/universities/nearest_with_events?lat=${latitude}&lng=${longitude}&limit=3`)
             .then(results => {
                 if (!results || results.length === 0) {
-                    showFallbackEvents("University of Nairobi (Main Campus)");
+                    showFallbackEvents(CURRENT_USER_UNIVERSITY);
                 } else {
                     const combinedEvents = results.flatMap(r => 
                         (r.events || []).map(ev => ({
@@ -251,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch(err => {
                 console.error("Error fetching nearest_with_events:", err);
-                showFallbackEvents("your location");
+                showFallbackEvents(CURRENT_USER_UNIVERSITY);
 
                 // ✅ Still load custom events even on error
                 apiFetch(`/api/events?is_custom=1&limit=16&sort=latest`)
@@ -261,10 +306,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
             });
         },
-        (error) => {
-            console.error("Geolocation error:", error);
-            showFallbackEvents("Nairobi University (Main Campus)");
+       (error) => {
+            // console.error("Geolocation error:", error);
+            if (DEFAULT_UNI_LAT && DEFAULT_UNI_LNG) {
+                apiFetch(`/api/universities/nearest_with_events?lat=${DEFAULT_UNI_LAT}&lng=${DEFAULT_UNI_LNG}&limit=3`)
+                    .then(showEvents)
+                    .catch(() => showFallbackEvents(CURRENT_USER_UNIVERSITY));
+            } else {
+                showFallbackEvents(CURRENT_USER_UNIVERSITY);
+            }
         },
+
         {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -273,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     } else {
         console.error("Geolocation not supported.");
-        showFallbackEvents("University of Nairobi (Main Campus)");
+        showFallbackEvents(CURRENT_USER_UNIVERSITY);
     }
 
   // --- Build card helper ---
@@ -373,49 +425,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderCustomEvents(events) {
-  // ensure wrapper exists
-  let section = document.getElementById("custom-events-section");
-  if (!section) {
-    section = document.createElement("section");
-    section.id = "custom-events-section";
-    section.className = "max-w-7xl mx-auto p-3 mt-3";
-    // HR + heading
-    const hr = document.createElement("hr");
-    hr.className = "my-3";
-    const heading = document.createElement("h3");
-    heading.className = "text-center text-xs font-semibold text-cyan-400 mb-2";
-    heading.textContent = "University Events with Custom Location";
-    section.appendChild(hr);
-    section.appendChild(heading);
+    // ensure wrapper exists
+    let section = document.getElementById("custom-events-section");
+    if (!section) {
+        section = document.createElement("section");
+        section.id = "custom-events-section";
+        section.className = "max-w-7xl mx-auto p-3 mt-3";
+        // HR + heading
+        const hr = document.createElement("hr");
+        hr.className = "my-3";
+        const heading = document.createElement("h3");
+        heading.className = "text-center text-xs font-semibold text-cyan-400 mb-2";
+        heading.textContent = "University Events with Custom Location";
+        section.appendChild(hr);
+        section.appendChild(heading);
 
-    // grid container
-    const grid = document.createElement("div");
-    grid.id = "custom-events-grid";
-    grid.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-10";
-    section.appendChild(grid);
+        // grid container
+        const grid = document.createElement("div");
+        grid.id = "custom-events-grid";
+        grid.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-10";
+        section.appendChild(grid);
 
-    // insert after main feed's container
-    const feedContainer = document.getElementById("lifestyle-feed");
-    if (feedContainer && feedContainer.parentNode) {
-      feedContainer.parentNode.insertBefore(section, feedContainer.nextSibling);
-    } else {
-      document.body.appendChild(section);
+        // insert after main feed's container
+        const feedContainer = document.getElementById("lifestyle-feed");
+        if (feedContainer && feedContainer.parentNode) {
+        feedContainer.parentNode.insertBefore(section, feedContainer.nextSibling);
+        } else {
+        document.body.appendChild(section);
+        }
     }
-  }
 
-  const grid = document.getElementById("custom-events-grid");
-  grid.innerHTML = "";
-  events.forEach(ev => {
-    const card = buildEventCard(ev); // returns a fragment
-    grid.appendChild(card);
-  });
-}
+    const grid = document.getElementById("custom-events-grid");
+    grid.innerHTML = "";
+    events.forEach(ev => {
+        const card = buildEventCard(ev); // returns a fragment
+        grid.appendChild(card);
+    });
+    }
 
 
   // --- Fallback latest events (after 3s delay) ---
   function showFallbackEvents(uniName) {
     feedMessage.innerHTML = `
-        You are closest to <b>${uniName}</b>, but we found <b>no</b> events near you. Loading latest events…
+        Something broke, falling back to events around <b>${uniName}</b>
     `;
 
     setTimeout(() => {
