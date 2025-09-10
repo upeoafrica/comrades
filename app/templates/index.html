@@ -24,9 +24,18 @@
   <header class="sticky top-0 z-50 bg-white shadow-sm">
     <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-2">
       <h1 class="text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r to-cyan-600 from-green-400">Comrades</h1>
-     <button id="upload-event-btn" class="bg-gradient-to-r to-indigo-600 from-green-400 text-white px-3 py-1 pb-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-      + Post Event
-    </button>
+     
+      <div class="flex items-center space-x-3">
+      <!-- User's name -->
+      {% if user %}
+        <span id="user-name" class="text-sm font-medium text-gray-700">{{ user['name'] }}</span>
+      {% endif %}
+
+      <!-- Post Event Button -->
+      <button id="upload-event-btn" class="bg-gradient-to-r to-indigo-600 from-green-400 text-white px-3 py-1 pb-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+        + Post Event
+      </button>
+    </div>
     </div>
   </header>
 
@@ -195,10 +204,30 @@
         <span class="text-[10px] font-medium mt-0.5">Mtaani</span>
       </button>
       <!-- Profile -->
-      <button class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
-        <i class="ri-user-3-line text-xl"></i>
-        <span class="text-[10px] font-medium mt-0.5">Profile</span>
-      </button>
+      <div class="relative">
+      {% if user %}
+        <!-- If logged in, show profile picture -->
+        <img id="profile-btn"
+            src="{{ user['picture'] }}"
+            alt="Profile"
+            class="w-8 h-8 rounded-full border-2 border-indigo-500 cursor-pointer" />
+      {% else %}
+        <!-- If not logged in, show default icon -->
+        <button id="profile-btn" class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
+          <i class="ri-user-3-line text-xl"></i>
+          <span class="text-[10px] font-medium mt-0.5">Profile</span>
+        </button>
+      {% endif %}
+
+      <!-- Popup Menu -->
+      <div id="profile-popup"
+          class="hidden absolute bottom-10 right-0 bg-white shadow-lg rounded-lg border border-gray-200 w-32 py-2 text-sm">
+        <a href="{{ url_for('auth.logout') }}"
+          class="block px-3 py-1 hover:bg-gray-100 text-red-500 font-medium">
+          Logout
+        </a>
+      </div>
+    </div>
     </div>
   </nav>
 
