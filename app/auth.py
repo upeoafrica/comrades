@@ -20,6 +20,7 @@ def get_session():
     university = None
     if domain:
         uni_doc = db.universities.find_one({"domain": domain}, {"name": 1})
+        print(domain, unidoc)
         if uni_doc:
             university = uni_doc["name"]
             latitude = uni_doc["latitude"]
@@ -106,4 +107,5 @@ def logout():
         "returnTo": url_for("views.home", _external=True),
         "client_id": os.getenv("AUTH0_CLIENT_ID")
     }
+
     return redirect(f"https://{os.getenv('AUTH0_DOMAIN')}/v2/logout?" + urlencode(params))
