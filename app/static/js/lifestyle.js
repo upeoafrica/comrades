@@ -234,43 +234,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Global fetch wrapper with rate-limit + error handling
     async function apiFetch(url, options = {}) {
-        try {
-            const res = await fetch(url, options);
-
-            // Handle rate limiting
-            if (res.status === 429) {
-                const err = await res.json();
-                showToast(err.message || "Too many requests. Please slow down.", "error");
-                throw new Error("Rate limited");
-            }
-
-            // Handle unauthorized → redirect to login
-            if (res.status === 401) {
-                showToast("Session expired. Please log in again.", "warning");
-                window.location.href = "/auth/login";
-                throw new Error("Unauthorized");
-            }
-
-            // If server sends error JSON, show it
+        const res = await fetch(url, options);
             if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                const message = err.message || `Request failed (${res.status})`;
-                showToast(message, "error");
-                throw new Error(message);
-            }
-
-            // Success → return JSON
-            return await res.json();
-        } catch (err) {
-            console.error("API fetch failed:", err);
-            if (err.message !== "Rate limited" && err.message !== "Unauthorized") {
+                const err = await res.json();
                 showToast(err.message, "error");
             }
-            throw err;
-        }
-    }
+            // Success → return JSON
+            return await res.json();
+       }
 
-
+    // Toast notification
     function showToast(message, type = "success") {
         const toast = document.createElement("div");
         toast.className = `
@@ -303,8 +276,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         navigator.geolocation.getCurrentPosition(
         (position) => {
             let { latitude, longitude, accuracy } = position.coords;
-            // console.log(`User location: ${latitude}, ${longitude}, accuracy: ${accuracy}m`);
-            // console.log(`User location: ${latitude}, ${longitude}, accuracy: ${accuracy}m`);
+            
+            // 🔄 Show loader at start
+            feedMessage.textContent = "";
+            document.getElementById("feed-loader").classList.remove("hidden");
+            document.getElementById("lifestyle-feed").classList.add("hidden");
 
             // If accuracy too poor (>1000m), fallback to session university
             if (accuracy > 1000) {
@@ -326,6 +302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             apiFetch(`/api/universities/nearest_with_events?lat=${latitude}&lng=${longitude}&limit=3`)
             .then(results => {
                 if (!results || results.length === 0) {
+                    feedMessage.textContent = "No events nearby. Showing fallback events.";
                     showFallbackEvents(CURRENT_USER_UNIVERSITY);
                 } else {
                     const combinedEvents = results.flatMap(r => 
@@ -339,7 +316,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     if (combinedEvents.length > 0) {
                         feedMessage.innerHTML = `Showing latest events in <b>${escapeHtml(uniNames)}</b>.`;
                         setEvents(combinedEvents, uniNames);
-                    } else {
+                        } else {
+                        feedMessage.textContent = "No events nearby. Showing fallback events.";
                         showFallbackEvents(uniNames);
                     }
                 }
@@ -349,14 +327,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                     .then(customs => {
                         customEvents = Array.isArray(customs) ? customs : [];
                         renderCustomEvents(customEvents);
+                        document.getElementById("feed-loader").classList.add("hidden");
+                        document.getElementById("lifestyle-feed").classList.remove("hidden");
+
                     })
-                    .catch(() => {
-                        // ignore silently
-                    });
+                    .catch(() => {}); //ignore silently
+
+                    // ✅ Hide loader, show feed
+                    document.getElementById("feed-loader").classList.add("hidden");
+                    document.getElementById("lifestyle-feed").classList.remove("hidden");
             })
             .catch(err => {
                 console.error("Error fetching nearest_with_events:", err);
                 showFallbackEvents(CURRENT_USER_UNIVERSITY);
+                document.getElementById("feed-loader").classList.add("hidden");
+                document.getElementById("lifestyle-feed").classList.remove("hidden");
+
 
                 // ✅ Still load custom events even on error
                 apiFetch(`/api/events?is_custom=1&limit=16&sort=latest`)
@@ -364,10 +350,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                         customEvents = Array.isArray(customs) ? customs : [];
                         renderCustomEvents(customEvents);
                     });
+
+                    // ✅ Hide loader, show feed
+                    document.getElementById("feed-loader").classList.add("hidden");
+                    document.getElementById("lifestyle-feed").classList.remove("hidden");
             });
         },
        (error) => {
             // console.error("Geolocation error:", error);
+            feedMessage.textContent = "Location unavailable. Showing fallback events.";
             if (DEFAULT_UNI_LAT && DEFAULT_UNI_LNG) {
                 apiFetch(`/api/universities/nearest_with_events?lat=${DEFAULT_UNI_LAT}&lng=${DEFAULT_UNI_LNG}&limit=3`)
                     .then(showEvents)
@@ -375,6 +366,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             } else {
                 showFallbackEvents(CURRENT_USER_UNIVERSITY);
             }
+
+            // ✅ Hide loader, show feed
+            document.getElementById("feed-loader").classList.add("hidden");
+            document.getElementById("lifestyle-feed").classList.remove("hidden");
         },
 
         {
@@ -383,9 +378,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             maximumAge: 0,
         }
         );
+
     } else {
-        console.error("Geolocation not supported.");
+        feedMessage.textContent = "Geolocation not supported. Showing fallback events.";
+        // console.error("Geolocation not supported.");
         showFallbackEvents(CURRENT_USER_UNIVERSITY);
+
+        // ✅ Hide loader, show feed
+        document.getElementById("feed-loader").classList.add("hidden");
+        document.getElementById("lifestyle-feed").classList.remove("hidden");
     }
 
   // --- Build card helper ---
@@ -686,4 +687,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
-
