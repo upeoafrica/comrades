@@ -7,22 +7,30 @@ const noHosted = document.getElementById("no-hosted");
 const cardTemplate = document.getElementById("event-card-template");
 
 function renderEventCard(event, type) {
+    const wrapper = document.createElement("div");
     const card = cardTemplate.content.cloneNode(true);
-    card.querySelector("img").src = event.image_url || "/static/default-event.jpg";
-    card.querySelector("h2").textContent = event.title;
-    card.querySelector("span").textContent = new Date(event.start_time).toLocaleDateString();
-    card.querySelector("p").textContent = event.description;
-    card.querySelector("span.text-[11px]").textContent = event.campus || "Unknown";
+    wrapper.appendChild(card);
 
-    // Conditionally show actions
+    const img = wrapper.querySelector("img");
+    const title = wrapper.querySelector("h2");
+    const date = wrapper.querySelector("span");
+    const desc = wrapper.querySelector("p");
+    const campus = wrapper.querySelector("span.text-[11px]");
+
+    img.src = event.image_url || "/static/default-event.jpg";
+    title.textContent = event.title;
+    date.textContent = new Date(event.start_time).toLocaleDateString();
+    desc.textContent = event.description;
+    campus.textContent = event.campus || "Unknown";
+
     if (type === "reservation") {
-        const btn = card.querySelector(".cancel-reservation");
+        const btn = wrapper.querySelector(".cancel-reservation");
         btn.classList.remove("hidden");
         btn.addEventListener("click", async () => {
             try {
                 await apiFetch(`/api/user/optins/${event.id}`, { method: "DELETE" });
                 showToast("Reservation cancelled");
-                card.firstElementChild.remove();
+                wrapper.remove(); // ✅ remove the whole card
             } catch {
                 showToast("Failed to cancel", "error");
             }
@@ -30,22 +38,23 @@ function renderEventCard(event, type) {
     }
 
     if (type === "hosted") {
-        const btn = card.querySelector(".delete-event");
+        const btn = wrapper.querySelector(".delete-event");
         btn.classList.remove("hidden");
         btn.addEventListener("click", async () => {
             if (!confirm("Are you sure you want to delete this event?")) return;
             try {
                 await apiFetch(`/api/events/${event.id}`, { method: "DELETE" });
                 showToast("Event deleted");
-                card.firstElementChild.remove();
+                wrapper.remove(); // ✅ remove the whole card
             } catch {
                 showToast("Failed to delete", "error");
             }
         });
     }
 
-    return card;
+    return wrapper;
 }
+
 
 async function loadProfileData() {
     try {
