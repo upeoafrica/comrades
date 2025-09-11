@@ -13,9 +13,9 @@ function renderEventCard(event, type) {
 
     const img = wrapper.querySelector("img");
     const title = wrapper.querySelector("h2");
-    const date = wrapper.querySelector("span");
+    const date = wrapper.querySelector(".event-date");
     const desc = wrapper.querySelector("p");
-    const campus = wrapper.querySelector("span.text-[11px]");
+    const campus = wrapper.querySelector(".event-campus");
 
     img.src = event.image_url || "/static/default-event.jpg";
     title.textContent = event.title;
@@ -94,15 +94,31 @@ async function loadProfileData() {
 
 document.addEventListener("DOMContentLoaded", loadProfileData);
 
+// Global fetch wrapper with rate-limit + error handling
 async function apiFetch(url, options = {}) {
-    const res = await fetch(url, options);
-        if (!res.ok) {
-            const err = await res.json();
-            showToast(err.message, "error");
-        }
-        // Success → return JSON
-        return await res.json();
+    const res = await fetch(url, {
+        credentials: "include", // 👈 important for session cookies
+        headers: { "Content-Type": "application/json" },
+        ...options,
+    });
+
+    let data;
+    try {
+        data = await res.json();
+    } catch {
+        data = null;
     }
+
+    if (!res.ok) {
+        showToast(data?.error || "Request failed", "error");
+        throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+
+    return data;
+}
+
+    
+
 
 function showToast(message, type = "success") {
     const toast = document.createElement("div");
@@ -129,4 +145,3 @@ function showToast(message, type = "success") {
         setTimeout(() => toast.remove(), 500);
     }, 3500);
 }
-
