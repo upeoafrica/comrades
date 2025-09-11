@@ -149,6 +149,8 @@ def get_nearest_university():
 
 
 @api_bp.route("/universities/nearest_with_events")
+@limiter.limit("3 per minute")
+@limiter.limit("33 per hour")
 def nearest_with_events():
     try:
         lat = request.args.get("lat")
@@ -204,16 +206,25 @@ def nearest_with_events():
 # Events
 # -----------------------------
 @api_bp.route("/events")
-@limiter.limit("60 per minute")
+@limiter.limit("5 per minute")
+@limiter.limit("33 per hour")
 def get_events():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    user_email = session["user"]["email"]
     search = request.args.get("search", "").strip()
     campus = request.args.get("campus", "").strip()
     limit = request.args.get("limit", type=int)
     sort_param = request.args.get("sort", "upcoming").lower()
     is_custom_param = request.args.get("is_custom") or request.args.get("is_custom_location")
 
-    user_email = session["user"]["email"] if "user" in session else None
     query = {}
+
+    # 🔐 Restrict hosted events to logged-in user only
+    if request.args.get("hosted") == "1":  
+        if not user_email:
+            return jsonify({"error": "Acha ufala. DCI wako rada."}), 401
+        query["owner_email"] = user_email
 
     if search:
         query["title"] = {"$regex": search, "$options": "i"}
@@ -224,9 +235,23 @@ def get_events():
             query["location"] = uni["name"]
 
     if is_custom_param is not None:
+        # ✅ Custom events are global
         p = str(is_custom_param).lower()
         query["is_custom_location"] = p in ("1", "true", "yes", "on")
+    else:
+        # ✅ Normal events restricted to user’s university
+        user_uni = session["user"].get("university")
+        if campus:  # allow override, but only if it matches their own uni
+            if campus.lower() == user_uni.lower():
+                query["location"] = user_uni
+            else:
+                return jsonify({"error": "Not allowed"}), 403
+        elif user_uni:
+            query["location"] = user_uni
+        else:
+            return jsonify([]) # no university info, return empty
 
+    # ✅ sorting
     sort_field = ("created_at", -1) if sort_param == "latest" else ("start_time", 1)
     events_cursor = db.events.find(query).sort([sort_field])
 
@@ -337,12 +362,13 @@ def create_event():
 
 @api_bp.route("/user/optins", methods=["GET"])
 def get_user_optins():
-    email = session["user"]["email"]
-    if not email:
-        return jsonify({"error": "Missing email"}), 400
-
-    user = db.user_optins.find_one({"email": email})
-    if not user:
-        return jsonify({"events": []})
-
-    return jsonify({"events": [str(eid) for eid in user.get("events", [])]})
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    user_email = session["user"]["email"]
+    optins = db.optins.find({"user_email": user_email})
+    events = []
+    for o in optins:
+            ev = db.events.find_one({"_id": o["event_id"]})
+            if ev:
+                events.append(serialize_event(ev, user_email))
+    return jsonify({"events": events})
