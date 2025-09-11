@@ -6,6 +6,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_limiter.errors import RateLimitExceeded
 from app import db
+from bson import ObjectId
 
 api_bp = Blueprint("api", __name__)
 
@@ -357,18 +358,23 @@ def create_event():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
-
-
+        
 @api_bp.route("/user/optins", methods=["GET"])
 def get_user_optins():
     if "user" not in session:
         return jsonify({"error": "Unauthorized"}), 401
+
     user_email = session["user"]["email"]
-    optins = db.optins.find({"user_email": user_email})
+
+    # Find the user's optins doc
+    optins = db.user_optins.find_one({"email": user_email})
+    if not optins:
+        return jsonify({"events": []})
+
     events = []
-    for o in optins:
-            ev = db.events.find_one({"_id": o["event_id"]})
-            if ev:
-                events.append(serialize_event(ev, user_email))
+    for event_id in optins.get("events", []):
+        ev = db.events.find_one({"_id": ObjectId(event_id)})
+        if ev:
+            events.append(serialize_event(ev, user_email))
+
     return jsonify({"events": events})
