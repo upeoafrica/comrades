@@ -1,5 +1,33 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
+    // Get tomorrow's date at midnight
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    // Convert to datetime-local format (YYYY-MM-DDTHH:MM)
+    const isoString = tomorrow.toISOString().slice(0, 16);
+
+    // Set min attribute for both start and end date fields
+    document.querySelector('input[name="start_time"]').setAttribute("min", isoString);
+    document.querySelector('input[name="end_time"]').setAttribute("min", isoString);
+
+    // Enforce tomorrow onwards for both fields
+    startInput.setAttribute("min", isoString);
+    endInput.setAttribute("min", isoString);
+
+    // Whenever start time changes, update end time constraints
+    startInput.addEventListener("change", () => {
+      if (startInput.value) {
+        endInput.min = startInput.value;
+
+        // If end time is before new start time, reset it
+        if (endInput.value && endInput.value < startInput.value) {
+          endInput.value = startInput.value;
+        }
+      }
+    });
+
     let CURRENT_USER_EMAIL = null;
     let CURRENT_USER_UNIVERSITY = null;
     let CURRENT_USER_NAME = null;
@@ -17,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function fetchUserSession() {
         try {
             const res = await fetch("/auth/session");
+
             const data = await res.json();
             if (data && data.email) {
                 CURRENT_USER_EMAIL = data.email;
@@ -24,6 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 CURRENT_USER_NAME = data.name;
                 DEFAULT_UNI_LAT = data.latitude;
                 DEFAULT_UNI_LNG = data.longitude;
+                picture = data.picture;
                 // console.log("[lifestyle] Logged in as:", CURRENT_USER_EMAIL);
             } else {
                 // console.warn("[lifestyle] No active session. Redirecting to login...");
@@ -206,21 +236,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function apiFetch(url, options = {}) {
         try {
             const res = await fetch(url, options);
-    
+
             // Handle rate limiting
             if (res.status === 429) {
                 const err = await res.json();
                 showToast(err.message || "Too many requests. Please slow down.", "error");
                 throw new Error("Rate limited");
             }
-    
+
             // Handle unauthorized → redirect to login
             if (res.status === 401) {
                 showToast("Session expired. Please log in again.", "warning");
                 window.location.href = "/auth/login";
                 throw new Error("Unauthorized");
             }
-    
+
             // If server sends error JSON, show it
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -228,7 +258,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 showToast(message, "error");
                 throw new Error(message);
             }
-    
+
             // Success → return JSON
             return await res.json();
         } catch (err) {
@@ -239,6 +269,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             throw err;
         }
     }
+
 
     function showToast(message, type = "success") {
         const toast = document.createElement("div");
@@ -284,7 +315,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
 
             // Fetch user opt-ins once
-            apiFetch(`/api/user/optins?email=${encodeURIComponent(CURRENT_USER_EMAIL)}`)
+           apiFetch("/api/user/optins")
             .then(data => {
                 userOptIns = data.events || [];
             })
@@ -655,5 +686,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
-
-
