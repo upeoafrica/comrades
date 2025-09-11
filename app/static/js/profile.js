@@ -84,7 +84,7 @@ async function loadProfileData() {
 
     } catch (err) {
         console.error("Profile load error:", err);
-        showToast("Error loading profile", "error");
+        showToast(err.message, "error");
 
         // Hide loaders in case of error
         document.getElementById("reservations-loader").classList.add("hidden");
@@ -119,3 +119,4 @@ function showToast(message, type = "success") {
         setTimeout(() => toast.remove(), 500);
     }, 3500);
 }
+
