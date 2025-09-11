@@ -21,7 +21,7 @@ function renderEventCard(event, type) {
     title.textContent = event.title;
     date.textContent = new Date(event.start_time).toLocaleDateString();
     desc.textContent = event.description;
-    campus.textContent = event.campus || "Unknown";
+    campus.textContent = event.location || "Location Error";
 
     if (type === "reservation") {
         const btn = wrapper.querySelector(".cancel-reservation");
