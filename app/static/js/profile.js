@@ -63,7 +63,7 @@ async function loadProfileData() {
         document.getElementById("hosted-loader").classList.remove("hidden");
 
         // Reservations
-        const optins = await apiFetch(`/api/user/optins?email=${encodeURIComponent(CURRENT_USER_EMAIL)}`);
+        const optins = await apiFetch(`/api/user/optins`);
         document.getElementById("reservations-loader").classList.add("hidden");
         document.getElementById("reservations-feed").classList.remove("hidden");
         if (optins.events?.length) {
@@ -72,8 +72,8 @@ async function loadProfileData() {
             noReservations.classList.remove("hidden");
         }
 
-        // Hosted events
-        const events = await apiFetch(`/api/events?owner_email=${encodeURIComponent(CURRENT_USER_EMAIL)}`);
+       // Hosted events (no email exposed)
+        const events = await apiFetch(`/api/events?hosted=1`);
         document.getElementById("hosted-loader").classList.add("hidden");
         document.getElementById("hosted-feed").classList.remove("hidden");
         if (events.length) {
@@ -119,4 +119,3 @@ function showToast(message, type = "success") {
         setTimeout(() => toast.remove(), 500);
     }, 3500);
 }
-
