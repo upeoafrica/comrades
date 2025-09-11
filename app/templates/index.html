@@ -54,13 +54,12 @@
 
      <!-- Feed message -->
       <div id="feed-message" class="mb-1 text-center text-xs text-cyan-400"></div>
-<!-- Lifestyle Feed -->
- <main id="lifestyle-feed" class="flex-1 max-w-7xl mx-auto p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start overflow-y-auto">
-    <!-- Event cards injected dynamically -->
-  </main>
+      <!-- Lifestyle Feed -->
+      <div id="feed-loader" class="text-center py-6 text-gray-400 text-sm">Loading events...</div>
+      <main id="lifestyle-feed" class="flex-1 max-w-7xl mx-auto p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start overflow-y-auto">
+          <!-- Event cards injected dynamically -->
+      </main>
 
-
-    
   </section>
 
 
@@ -209,10 +208,10 @@
         <!-- If logged in, show profile picture -->
          <a href="/profile">
           <img id="profile-btn"
-              src="{{ user['picture'] }}"
-              alt="Profile"
-              class="w-8 h-8 mt-0.5 rounded-full border-2 border-indigo-500 cursor-pointer" />
-         </a>
+            src="{{ user['picture'] }}"
+            alt="Profile"
+            class="w-8 h-8 mt-0.5 rounded-full border-2 border-indigo-500 cursor-pointer" />
+        </a>
       {% else %}
         <!-- If not logged in, show default icon -->
         <button id="profile-btn" class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
@@ -238,4 +237,3 @@
   <script src="{{ url_for('static', filename='js/lifestyle.js') }}"></script>
 </body>
 </html>
-
