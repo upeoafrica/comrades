@@ -9,8 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isoString = tomorrow.toISOString().slice(0, 16);
 
     // Set min attribute for both start and end date fields
-    document.querySelector('input[name="start_time"]').setAttribute("min", isoString);
-    document.querySelector('input[name="end_time"]').setAttribute("min", isoString);
+    const startInput = document.querySelector('input[name="start_time"]');
+    const endInput = document.querySelector('input[name="end_time"]');
 
     // Enforce tomorrow onwards for both fields
     startInput.setAttribute("min", isoString);
@@ -686,3 +686,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
