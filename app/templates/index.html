@@ -207,10 +207,12 @@
       <div class="relative">
       {% if user %}
         <!-- If logged in, show profile picture -->
-        <img id="profile-btn"
-            src="{{ user['picture'] }}"
-            alt="Profile"
-            class="w-8 h-8 rounded-full border-2 border-indigo-500 cursor-pointer" />
+         <a href="/profile">
+          <img id="profile-btn"
+              src="{{ user['picture'] }}"
+              alt="Profile"
+              class="w-8 h-8 mt-0.5 rounded-full border-2 border-indigo-500 cursor-pointer" />
+         </a>
       {% else %}
         <!-- If not logged in, show default icon -->
         <button id="profile-btn" class="flex flex-col items-center text-gray-500 hover:text-indigo-600 transition">
@@ -236,3 +238,4 @@
   <script src="{{ url_for('static', filename='js/lifestyle.js') }}"></script>
 </body>
 </html>
+
