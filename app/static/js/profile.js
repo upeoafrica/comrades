@@ -94,6 +94,16 @@ async function loadProfileData() {
 
 document.addEventListener("DOMContentLoaded", loadProfileData);
 
+async function apiFetch(url, options = {}) {
+    const res = await fetch(url, options);
+        if (!res.ok) {
+            const err = await res.json();
+            showToast(err.message, "error");
+        }
+        // Success → return JSON
+        return await res.json();
+    }
+
 function showToast(message, type = "success") {
     const toast = document.createElement("div");
     toast.className = `
@@ -119,3 +129,4 @@ function showToast(message, type = "success") {
         setTimeout(() => toast.remove(), 500);
     }, 3500);
 }
+
